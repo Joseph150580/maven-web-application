@@ -1,8 +1,37 @@
+def sendSlackNotification(String buildStatus = 'STARTED') {
+  
+  buildStatus =  buildStatus ?: 'SUCCESSFUL'
+
+  // Default values
+  def colorName = 'RED'
+  def colorCode = '#FF0000'
+  def subject = "${buildStatus}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+  def summary = "${subject} (${env.BUILD_URL})"
+
+  // Override default values based on build status
+  if (buildStatus == 'STARTED') {
+    color = 'YELLOW'
+    colorCode = '#FFFF00'
+  } else if (buildStatus == 'SUCCESS') {
+    color = 'GREEN'
+    colorCode = '#00FF00'
+  } else {
+    color = 'RED'
+    colorCode = '#FF0000'
+  }
+
+  // Send notifications
+  sendSlackNotification(color: colorCode, message: summary)
+}
+
 //Get the code from Github Repo
+try {
 node{
 echo "Job name is: ${env.JOB_NAME} "
 echo "Node Name is : ${env.NODE_NAME} "
+
 properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '5', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')), [$class: 'JobLocalConfiguration', changeReasonComment: ''], pipelineTriggers([pollSCM('* * * * *')])])
+
 def mavenHome =tool name:'maven3.8.5'
 stage ('checkoutcode'){
 git branch: 'development', credentialsId: 'eb54a3b9-213b-41f4-a5e9-3c3cae4756ac', url: 'https://github.com/Joseph150580/maven-web-application.git'
@@ -12,7 +41,7 @@ git branch: 'development', credentialsId: 'eb54a3b9-213b-41f4-a5e9-3c3cae4756ac'
 stage ('Build'){
 sh "${mavenHome}/bin/mvn clean package"
 }
-/*
+*/
 // Excute the sonarqube report
 stage ('ExcuteSonarqubeReport'){
 sh "${mavenHome}/bin/mvn sonar:sonar"
@@ -29,6 +58,16 @@ sshagent(['4e5d12fd-4220-4a75-9781-a4ff2dfca5c4']) {
 
 }
 */
+}//try closing
+catch(e){
+currentBuild.result = "FAILED"
+}
+finally {
+    // Success or failure, always send notifications
+    sendSlackNotification(currentBuild.result)
+  }
+
+
 }
 
 
