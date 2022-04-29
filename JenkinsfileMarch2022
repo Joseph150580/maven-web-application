@@ -21,7 +21,7 @@ def sendSlackNotification(String buildStatus = 'STARTED') {
   }
 
   // Send notifications
-  sendSlackNotification(color: colorCode, message: summary)
+  slackSend (color: colorCode, message: summary)
 }
 
 //Get the code from Github Repo
